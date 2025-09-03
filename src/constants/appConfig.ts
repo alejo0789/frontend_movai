@@ -22,6 +22,13 @@ export const API_ENDPOINTS = {
     byCedula: `${API_BASE_URL}/api/v1/conductores/by_cedula/`,
     qr: (driverId: string) => `${API_BASE_URL}/api/v1/conductores/${driverId}/qr`,
   },
+  jetsonNanos: {
+    base: `${API_BASE_URL}/api/v1/jetson-nanos/`,
+    telemetry: `${API_BASE_URL}/api/v1/jetson-nanos/telemetry`,
+    recentTelemetry: (hardwareId: string) => `${API_BASE_URL}/api/v1/jetson-nanos/${hardwareId}/telemetry/recent`,
+    telemetryHistory: (hardwareId: string) => `${API_BASE_URL}/api/v1/jetson-nanos/${hardwareId}/telemetry/history`,
+    byHardwareId: (hardwareId: string) => `${API_BASE_URL}/api/v1/jetson-nanos/${hardwareId}`,
+  },
   trainingData: {
     videos: `${API_BASE_URL}/api/v1/training-data/videos/`,
     images: (videoId: string) => `${API_BASE_URL}/api/v1/training-data/images/${videoId}`,
@@ -59,6 +66,21 @@ export const APP_CONSTANTS = {
     ADMIN_GLOBAL: "Administrador Global",
     ADMIN_EMPRESA: "Administrador Empresa",
     SOCIO: "Socio",
+  },
+  JETSON_STATUS: {
+    CONNECTED: "Conectado",
+    DISCONNECTED: "Desconectado",
+    MAINTENANCE: "Mantenimiento",
+  },
+  TELEMETRY_THRESHOLDS: {
+    CPU_WARNING: 70,
+    CPU_CRITICAL: 85,
+    RAM_WARNING: 70,
+    RAM_CRITICAL: 85,
+    DISK_WARNING: 70,
+    DISK_CRITICAL: 85,
+    TEMP_WARNING: 65,
+    TEMP_CRITICAL: 80,
   },
   // Añade más constantes aquí
 };
