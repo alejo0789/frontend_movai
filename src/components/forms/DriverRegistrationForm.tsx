@@ -1,9 +1,8 @@
-// src/components/forms/DriverRegistrationForm.tsx
 'use client'; 
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { postApi, fetchApi, uploadFileApi, fetchImageApi } from '@/lib/api'; // <<<<<<< fetchImageApi importado
+import { postApi, fetchApi, uploadFileApi, fetchImageApi } from '@/lib/api'; 
 import { API_ENDPOINTS } from '@/constants/appConfig'; 
 import { DriverData, DriverResponse, QrResponse, VideoTrainingResponse } from '@/types/driver'; 
 import { EmpresaResponse } from '@/types/company'; 
@@ -33,7 +32,7 @@ const DriverRegistrationForm: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(false);
   const [currentDriverId, setCurrentDriverId] = useState<string | null>(null); 
   const [currentDriverData, setCurrentDriverData] = useState<DriverResponse | null>(null); 
-  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null); // URL de la imagen del QR
+  const [qrImageUrl, setQrImageUrl] = useState<string | null>(null); 
   const [videoFile, setVideoFile] = useState<File | null>(null); 
   const [videoUploadProgress, setVideoUploadProgress] = useState<number>(0);
   const [videoProcessingMessage, setVideoProcessingMessage] = useState<string | null>(null);
@@ -51,11 +50,21 @@ const DriverRegistrationForm: React.FC = () => {
     loadEmpresas();
   }, []);
 
+  // Corregimos la función handleChange para manejar de forma segura los diferentes tipos de input
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
+    let newValue;
+    
+    // Verificamos si el target es un input de tipo checkbox para usar su propiedad 'checked'
+    if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') {
+      newValue = e.target.checked;
+    } else {
+      newValue = value;
+    }
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: newValue,
     }));
   };
 
@@ -69,13 +78,13 @@ const DriverRegistrationForm: React.FC = () => {
 
   const handleDriverRegistration = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);           
-    setSuccessMessage(null);  
+    setError(null);         
+    setSuccessMessage(null);    
     setLoading(true);
     setCurrentDriverId(null); 
     setCurrentDriverData(null); 
     setQrImageUrl(null);      
-    setVideoFile(null);       
+    setVideoFile(null);      
     setVideoUploadProgress(0);
     setVideoProcessingMessage(null);
     setShowVideoUploadSection(false); 
@@ -95,16 +104,13 @@ const DriverRegistrationForm: React.FC = () => {
         setCurrentDriverId(response.data.id); 
         setCurrentDriverData(response.data); 
         
-        // <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
-        // ¡CAMBIO CLAVE AQUÍ! Usar fetchImageApi para el QR
-        const qrResponse = await fetchImageApi(API_ENDPOINTS.drivers.qr(response.data.id)); // <<<<<<<<<<< USAR fetchImageApi
+        const qrResponse = await fetchImageApi(API_ENDPOINTS.drivers.qr(response.data.id));
         if (qrResponse.success && qrResponse.data) {
-          setQrImageUrl(qrResponse.data); // qrResponse.data contendrá la URL del Blob
+          setQrImageUrl(qrResponse.data); 
           setSuccessMessage(prev => `${prev} QR generado y carnet listo.`);
         } else {
           setError(qrResponse.message || 'Error al generar el código QR.');
         }
-        // >>>>>>>>>>>>>>>>>><<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 
       } else {
         setError(response.message || 'Fallo al registrar el conductor.');
@@ -378,9 +384,9 @@ const DriverRegistrationForm: React.FC = () => {
           <div className="mt-6 text-center">
             <Button 
               type="button" 
-              variant="primary" // Cambiado a variant="primary" para más énfasis
+              variant="primary" 
               onClick={() => setShowVideoUploadSection(true)} 
-              disabled={loading} // Deshabilitar si está cargando otra operación
+              disabled={loading} 
             >
               Continuar a Subir Video de Entrenamiento
             </Button>
