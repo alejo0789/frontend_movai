@@ -1,5 +1,5 @@
 // src/components/dashboard/KpiCard.tsx
-import React from 'react';
+import React, { JSX } from 'react';
 
 interface KpiCardProps {
   title: string;
