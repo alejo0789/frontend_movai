@@ -1,4 +1,3 @@
-// src/components/forms/UserRegistrationForm.tsx
 'use client'; 
 
 import React, { useState, useEffect } from 'react';
@@ -20,7 +19,7 @@ const UserRegistrationForm: React.FC = () => {
   });
   const [empresas, setEmpresas] = useState<EmpresaResponse[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null); // <<<<<<< NUEVO ESTADO
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const router = useRouter(); 
 
@@ -44,18 +43,27 @@ const UserRegistrationForm: React.FC = () => {
     loadEmpresas();
   }, []);
 
+  // Función corregida para manejar de forma segura los diferentes tipos de input
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
+    let newValue;
+    
+    if (e.target instanceof HTMLInputElement && e.target.type === 'checkbox') {
+      newValue = e.target.checked;
+    } else {
+      newValue = value;
+    }
+    
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : value,
+      [name]: newValue,
     }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);           // Limpiar errores anteriores
-    setSuccessMessage(null);  // Limpiar mensajes de éxito anteriores
+    setError(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
@@ -67,8 +75,8 @@ const UserRegistrationForm: React.FC = () => {
       const response = await postApi<UserResponse>(API_ENDPOINTS.users.base, dataToSend); 
 
       if (response.success && response.data) {
-        setSuccessMessage(`Usuario ${response.data.username} registrado exitosamente.`); // <<<<<<< MENSAJE DE ÉXITO
-        setFormData({ // Limpiar formulario después del éxito
+        setSuccessMessage(`Usuario ${response.data.username} registrado exitosamente.`);
+        setFormData({
           username: '',
           password: '',
           email: '',
@@ -77,7 +85,7 @@ const UserRegistrationForm: React.FC = () => {
           id_empresa: null,
         });
       } else {
-        setError(response.message || 'Fallo al registrar el usuario.'); // <<<<<<< MENSAJE DE ERROR
+        setError(response.message || 'Fallo al registrar el usuario.');
       }
     } catch (err) {
       console.error('Error durante el registro de usuario:', err);
@@ -91,7 +99,6 @@ const UserRegistrationForm: React.FC = () => {
     <div className="card-modern p-8 max-w-2xl mx-auto my-10 animate-fade-in-up">
       <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">Registrar Nuevo Usuario</h2>
       
-      {/* <<<<<<< MOSTRAR MENSAJES DE ÉXITO O ERROR AQUI <<<<<<< */}
       {successMessage && (
         <div className="bg-green-100 text-green-700 p-3 rounded-md mb-4 text-center font-medium shadow-sm">
           {successMessage}
@@ -206,7 +213,7 @@ const UserRegistrationForm: React.FC = () => {
               type="checkbox"
               id="activo"
               name="activo"
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" // Usando blue-600 por defecto
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
               checked={formData.activo}
               onChange={handleChange}
               disabled={loading}
@@ -221,7 +228,7 @@ const UserRegistrationForm: React.FC = () => {
         <Button 
           type="submit" 
           className="w-full py-2.5 px-4" 
-          variant="primary" // Usa la variante 'primary' de tu Button.tsx
+          variant="primary" 
           disabled={loading}
         >
           {loading ? 'Registrando...' : 'Registrar Usuario'}
