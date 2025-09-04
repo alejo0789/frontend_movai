@@ -108,7 +108,7 @@ export default function DriversPage() {
   useEffect(() => {
     // In a real application, you'd fetch initial data here
     // For demonstration, we're using mock data
-    /*
+    
     const loadData = async () => {
       setLoading(true);
       setError(null);
@@ -134,20 +134,30 @@ export default function DriversPage() {
       }
     };
     loadData();
-    */
+    
   }, []);
 
-  const handleFilterByCompany = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setSelectedCompanyId(e.target.value);
-    // In a real app, you'd trigger an API call or filter existing 'drivers' state
-    // For mock: filter locally
-    if (e.target.value === '') {
-      setDrivers(mockDrivers);
-    } else {
-      setDrivers(mockDrivers.filter(driver => driver.id_empresa === e.target.value));
+const handleFilterByCompany = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+  setSelectedCompanyId(e.target.value);
+  setLoading(true);
+  
+  try {
+    let endpoint = API_ENDPOINTS.drivers.base;
+    if (e.target.value !== '') {
+      // Asumiendo que tu API acepta filtros por empresa
+      endpoint = `${API_ENDPOINTS.drivers.base}?empresa_id=${e.target.value}`;
     }
-  };
-
+    
+    const driversResponse = await fetchApi<DriverResponse[]>(endpoint);
+    if (driversResponse.success && driversResponse.data) {
+      setDrivers(driversResponse.data);
+    }
+  } catch (error) {
+    setError('Error al filtrar conductores');
+  } finally {
+    setLoading(false);
+  }
+};
   const handleSearchByBusPlaca = async () => {
     setError(null);
     setLoading(true);
