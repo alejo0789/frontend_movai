@@ -3,189 +3,180 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
-import KpiCard from '@/components/dashboard/KpiCard';
-import Button from '@/components/common/Button';
 import { fetchApi } from '@/lib/api';
 import { API_ENDPOINTS } from '@/constants/appConfig';
 import { DriverResponse } from '@/types/driver';
 import { EmpresaResponse } from '@/types/company';
+import DriversTable from './DriversTable';
+import Button from '@/components/common/Button';
 
-// --- Mock Data for demonstration ---
-// In a real application, this data would come from your backend API
-const mockDrivers: DriverResponse[] = [
-  {
-    id: '1a2b3c4d-5e6f-7890-1234-567890abcdef',
-    cedula: '123456789',
-    nombre_completo: 'Juan Pérez García',
-    id_empresa: 'empresa-uuid-1',
-    fecha_nacimiento: '1985-03-15',
-    telefono_contacto: '555-1111',
-    email: 'juan.perez@example.com',
-    licencia_conduccion: 'LIC-JP85',
-    tipo_licencia: 'B2',
-    fecha_expiracion_licencia: '2027-12-31',
-    activo: true,
-    codigo_qr_hash: null,
-    foto_perfil_url: '',
-    id_video_entrenamiento_principal: null,
-    last_updated_at: new Date().toISOString(),
-    // These fields would ideally come from the backend or be calculated
-    // For demonstration, adding mock values
-    calificacion_general: 9.2,
-    calificacion_ultimo_mes: 8.9,
-    horas_conduccion: 185, // in hours
-  },
-  {
-    id: '9f8e7d6c-5b4a-3210-fedc-ba9876543210',
-    cedula: '987654321',
-    nombre_completo: 'María López Fernández',
-    id_empresa: 'empresa-uuid-2',
-    fecha_nacimiento: '1990-07-22',
-    telefono_contacto: '555-2222',
-    email: 'maria.lopez@example.com',
-    licencia_conduccion: 'LIC-ML90',
-    tipo_licencia: 'C1',
-    fecha_expiracion_licencia: '2026-06-30',
-    activo: true,
-    codigo_qr_hash: null,
-    foto_perfil_url: '',
-    id_video_entrenamiento_principal: null,
-    last_updated_at: new Date().toISOString(),
-    calificacion_general: 8.5,
-    calificacion_ultimo_mes: 8.7,
-    horas_conduccion: 150,
-  },
-  {
-    id: 'abcde123-4567-89ab-cdef-1234567890ab',
-    cedula: '112233445',
-    nombre_completo: 'Carlos Ruiz Delgado',
-    id_empresa: 'empresa-uuid-1',
-    fecha_nacimiento: '1978-01-01',
-    telefono_contacto: '555-3333',
-    email: 'carlos.ruiz@example.com',
-    licencia_conduccion: 'LIC-CR78',
-    tipo_licencia: 'B1',
-    fecha_expiracion_licencia: '2028-11-01',
-    activo: false,
-    codigo_qr_hash: null,
-    foto_perfil_url: '',
-    id_video_entrenamiento_principal: null,
-    last_updated_at: new Date().toISOString(),
-    calificacion_general: 7.9,
-    calificacion_ultimo_mes: 8.1,
-    horas_conduccion: 90,
-  },
-];
-
-const mockCompanies: EmpresaResponse[] = [
-  { id: 'empresa-uuid-1', nombre_empresa: 'Transportes Rápidos S.A.', nit: '900123456-1' },
-  { id: 'empresa-uuid-2', nombre_empresa: 'Logística Segura Ltda.', nit: '800987654-2' },
-];
-
-// Extend DriverResponse type to include mock rating and hours data
-// This is a declaration merge, it adds new properties to the existing interface.
-// For Next.js App Router and 'use client' components, metadata export is not allowed directly
-// in the page file. It should be defined in a layout.tsx for server components or handled
-// dynamically if needed in client components.
-declare module '@/types/driver' {
-  export interface DriverResponse {
-    calificacion_general?: number;
-    calificacion_ultimo_mes?: number;
-    horas_conduccion?: number;
-  }
+// Componente KPI Card
+interface KpiCardProps {
+  title: string;
+  value: string | number;
+  icon: 'user' | 'users' | 'star' | 'clock';
+  color: 'blue' | 'green' | 'yellow' | 'purple';
+  subtitle?: string;
 }
-// --- End Mock Data ---
+
+const KpiCard: React.FC<KpiCardProps> = ({ title, value, icon, color, subtitle }) => {
+  const getIconComponent = () => {
+    switch (icon) {
+      case 'user':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        );
+      case 'users':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+          </svg>
+        );
+      case 'star':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+          </svg>
+        );
+      case 'clock':
+        return (
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getColorClasses = () => {
+    switch (color) {
+      case 'blue':
+        return 'bg-blue-50 text-blue-600 border-blue-200';
+      case 'green':
+        return 'bg-green-50 text-green-600 border-green-200';
+      case 'yellow':
+        return 'bg-yellow-50 text-yellow-600 border-yellow-200';
+      case 'purple':
+        return 'bg-purple-50 text-purple-600 border-purple-200';
+      default:
+        return 'bg-gray-50 text-gray-600 border-gray-200';
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+      <div className="flex items-center">
+        <div className={`p-3 rounded-lg border ${getColorClasses()}`}>
+          {getIconComponent()}
+        </div>
+        <div className="ml-4">
+          <p className="text-sm font-medium text-gray-600">{title}</p>
+          <p className="text-2xl font-bold text-gray-900">{value}</p>
+          {subtitle && <p className="text-xs text-gray-500 mt-1">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 export default function DriversPage() {
-  const [drivers, setDrivers] = useState<DriverResponse[]>(mockDrivers);
-  const [companies, setCompanies] = useState<EmpresaResponse[]>(mockCompanies);
+  const [drivers, setDrivers] = useState<DriverResponse[]>([]);
+  const [companies, setCompanies] = useState<EmpresaResponse[]>([]);
+  const [filteredDrivers, setFilteredDrivers] = useState<DriverResponse[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
-  const [busPlaca, setBusPlaca] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Cargar datos iniciales
   useEffect(() => {
-    // In a real application, you'd fetch initial data here
-    // For demonstration, we're using mock data
-    
-    const loadData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const companiesResponse = await fetchApi<EmpresaResponse[]>(API_ENDPOINTS.companies); //
-        if (companiesResponse.success && companiesResponse.data) {
-          setCompanies(companiesResponse.data);
-        } else {
-          setError(companiesResponse.message || 'Error al cargar empresas.');
-        }
-
-        const driversResponse = await fetchApi<DriverResponse[]>(API_ENDPOINTS.drivers.base); //
-        if (driversResponse.success && driversResponse.data) {
-          setDrivers(driversResponse.data);
-        } else {
-          setError(driversResponse.message || 'Error al cargar conductores.');
-        }
-      } catch (err: any) {
-        console.error('Error loading data:', err);
-        setError(err.message || 'Error de red o servidor.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    loadData();
-    
+    loadInitialData();
   }, []);
 
-const handleFilterByCompany = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-  setSelectedCompanyId(e.target.value);
-  setLoading(true);
-  
-  try {
-    let endpoint = API_ENDPOINTS.drivers.base;
-    if (e.target.value !== '') {
-      // Asumiendo que tu API acepta filtros por empresa
-      endpoint = `${API_ENDPOINTS.drivers.base}?empresa_id=${e.target.value}`;
-    }
-    
-    const driversResponse = await fetchApi<DriverResponse[]>(endpoint);
-    if (driversResponse.success && driversResponse.data) {
-      setDrivers(driversResponse.data);
-    }
-  } catch (error) {
-    setError('Error al filtrar conductores');
-  } finally {
-    setLoading(false);
-  }
-};
-  const handleSearchByBusPlaca = async () => {
-    setError(null);
+  // Aplicar filtros cuando cambien los datos o filtros
+  useEffect(() => {
+    applyFilters();
+  }, [drivers, selectedCompanyId, searchTerm, statusFilter]);
+
+  const loadInitialData = async () => {
     setLoading(true);
-    // In a real app, this would involve multiple API calls:
-    // 1. Fetch bus by placa: API_ENDPOINTS.buses.byPlaca
-    // 2. Then, fetch drivers for that bus: API_ENDPOINTS.buses.drivers(busId)
-    // For now, it's a mock.
-    console.log(`Searching for drivers by bus placa: ${busPlaca}`);
-    // Simulate a search result (e.g., all drivers if no specific bus logic)
-    setDrivers(mockDrivers); // Or a subset filtered by placa if mock data supports it
-    setLoading(false);
+    setError(null);
+    
+    try {
+      // Cargar empresas
+      const companiesResponse = await fetchApi<EmpresaResponse[]>(API_ENDPOINTS.companies);
+      if (companiesResponse.success && companiesResponse.data) {
+        setCompanies(companiesResponse.data);
+      } else {
+        console.error('Error al cargar empresas:', companiesResponse.message);
+      }
+
+      // Cargar conductores
+      const driversResponse = await fetchApi<DriverResponse[]>(API_ENDPOINTS.drivers.base);
+      if (driversResponse.success && driversResponse.data) {
+        setDrivers(driversResponse.data);
+      } else {
+        setError(driversResponse.message || 'Error al cargar conductores');
+      }
+    } catch (err: any) {
+      console.error('Error loading initial data:', err);
+      setError('Error de red al cargar los datos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const applyFilters = () => {
+    let filtered = [...drivers];
+
+    // Filtrar por empresa
+    if (selectedCompanyId && selectedCompanyId !== 'all') {
+      filtered = filtered.filter(driver => driver.id_empresa === selectedCompanyId);
+    }
+
+    // Filtrar por término de búsqueda
+    if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase().trim();
+      filtered = filtered.filter(driver => 
+        driver.nombre_completo.toLowerCase().includes(term) ||
+        driver.cedula.includes(term) ||
+        (driver.email && driver.email.toLowerCase().includes(term)) ||
+        (driver.telefono_contacto && driver.telefono_contacto.includes(term))
+      );
+    }
+
+    // Filtrar por estado
+    if (statusFilter !== 'all') {
+      const isActive = statusFilter === 'active';
+      filtered = filtered.filter(driver => driver.activo === isActive);
+    }
+
+    setFilteredDrivers(filtered);
+  };
+
+  const handleRefresh = () => {
+    loadInitialData();
   };
 
   const handleClearFilters = () => {
     setSelectedCompanyId('');
-    setBusPlaca('');
-    setDrivers(mockDrivers); // Reset to all mock drivers
+    setSearchTerm('');
+    setStatusFilter('all');
   };
 
-  // Calculate KPI values from mock data
-  const totalDrivers = mockDrivers.length;
-  const activeDrivers = mockDrivers.filter(d => d.activo).length;
-  const averageRating = (mockDrivers.reduce((sum, d) => sum + (d.calificacion_general || 0), 0) / totalDrivers).toFixed(1);
-  const totalDrivingHoursLastMonth = mockDrivers.reduce((sum, d) => sum + (d.horas_conduccion || 0), 0); // using total for simplicity
+  // Calcular KPIs
+  const totalDrivers = drivers.length;
+  const activeDrivers = drivers.filter(d => d.activo).length;
+  const inactiveDrivers = totalDrivers - activeDrivers;
+  const companiesWithDrivers = new Set(drivers.map(d => d.id_empresa)).size;
 
   return (
     <div className="space-y-8 animate-fade-in-up">
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl md:text-5xl font-bold gradient-text mb-2">
@@ -195,36 +186,105 @@ const handleFilterByCompany = async (e: React.ChangeEvent<HTMLSelectElement>) =>
             Administra y monitorea a todos los conductores del sistema.
           </p>
         </div>
-        {/* You can add real-time status or other small indicators here */}
+        
+        <div className="mt-4 md:mt-0 flex items-center space-x-3">
+          <Button
+            onClick={handleRefresh}
+            disabled={loading}
+            variant="secondary"
+            className="flex items-center space-x-2"
+          >
+            <svg 
+              className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            <span>Actualizar</span>
+          </Button>
+          
+          <Link href="/drivers/register">
+            <Button variant="primary" className="flex items-center space-x-2">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span>Nuevo Conductor</span>
+            </Button>
+          </Link>
+        </div>
       </div>
 
-      {/* KPI Cards Grid */}
+      {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-        <KpiCard title="Total Conductores" value={totalDrivers.toString()} icon="user" color="blue" />
-        <KpiCard title="Conductores Activos" value={activeDrivers.toString()} icon="user" color="green" />
-        {/* For these KPI Cards, the data (calificacion_general, horas_conduccion) are not explicitly in DriverResponse type or current API endpoints. 
-            They would need to be added to your backend data model and API responses. */}
-        <KpiCard title="Promedio Calificación General" value={averageRating} unit="/10" icon="star" color="yellow" />
-        <KpiCard title="Horas Conducción (Último Mes)" value={totalDrivingHoursLastMonth.toString()} unit="hrs" icon="bus" color="blue" />
+        <KpiCard 
+          title="Total Conductores" 
+          value={totalDrivers} 
+          icon="users" 
+          color="blue"
+          subtitle="En el sistema"
+        />
+        <KpiCard 
+          title="Conductores Activos" 
+          value={activeDrivers} 
+          icon="user" 
+          color="green"
+          subtitle="Disponibles"
+        />
+        <KpiCard 
+          title="Conductores Inactivos" 
+          value={inactiveDrivers} 
+          icon="user" 
+          color="yellow"
+          subtitle="No disponibles"
+        />
+        <KpiCard 
+          title="Empresas con Conductores" 
+          value={companiesWithDrivers} 
+          icon="star" 
+          color="purple"
+          subtitle="Activas"
+        />
       </div>
 
-      {/* Filter Section */}
-      <div className="card-modern p-6">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Filtros</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
-          {/* Filter by Company */}
+      {/* Filtros */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Filtros de Búsqueda</h2>
+        
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Búsqueda por texto */}
           <div>
-            <label htmlFor="company-filter" className="block text-sm font-medium text-gray-700 mb-1">
-              Filtrar por Empresa:
+            <label htmlFor="search" className="block text-sm font-medium text-gray-700 mb-1">
+              Buscar
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="search"
+                placeholder="Nombre, cédula, email..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+              <svg className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Filtro por empresa */}
+          <div>
+            <label htmlFor="company" className="block text-sm font-medium text-gray-700 mb-1">
+              Empresa
             </label>
             <select
-              id="company-filter"
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
+              id="company"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               value={selectedCompanyId}
-              onChange={handleFilterByCompany}
-              disabled={loading}
+              onChange={(e) => setSelectedCompanyId(e.target.value)}
             >
-              <option value="">-- Todas las Empresas --</option>
+              <option value="">Todas las empresas</option>
               {companies.map((company) => (
                 <option key={company.id} value={company.id}>
                   {company.nombre_empresa}
@@ -233,149 +293,107 @@ const handleFilterByCompany = async (e: React.ChangeEvent<HTMLSelectElement>) =>
             </select>
           </div>
 
-          {/* Search by Bus Placa */}
+          {/* Filtro por estado */}
           <div>
-            <label htmlFor="bus-placa-search" className="block text-sm font-medium text-gray-700 mb-1">
-              Buscar por Placa de Bus:
+            <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">
+              Estado
             </label>
-            <div className="flex space-x-2">
-              <input
-                type="text"
-                id="bus-placa-search"
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                value={busPlaca}
-                onChange={(e) => setBusPlaca(e.target.value)}
-                placeholder="Ej: ABC-123"
-                disabled={loading}
-              />
-              <Button onClick={handleSearchByBusPlaca} disabled={loading || busPlaca.trim() === ''}>
-                Buscar
-              </Button>
-            </div>
+            <select
+              id="status"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+            >
+              <option value="all">Todos los estados</option>
+              <option value="active">Solo activos</option>
+              <option value="inactive">Solo inactivos</option>
+            </select>
           </div>
 
-          {/* Clear Filters Button */}
-          <div className="md:col-span-1 flex justify-end">
-            <Button variant="secondary" onClick={handleClearFilters} disabled={loading}>
+          {/* Botón limpiar filtros */}
+          <div className="flex items-end">
+            <Button 
+              variant="secondary" 
+              onClick={handleClearFilters}
+              className="w-full"
+              disabled={!selectedCompanyId && !searchTerm && statusFilter === 'all'}
+            >
               Limpiar Filtros
             </Button>
           </div>
         </div>
-        {error && (
-          <div className="bg-red-100 text-red-700 p-3 rounded-md mt-4 text-center font-medium shadow-sm">
-            {error}
+
+        {/* Información de resultados */}
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="flex items-center justify-between text-sm text-gray-600">
+            <span>
+              Mostrando {filteredDrivers.length} de {totalDrivers} conductores
+            </span>
+            {(selectedCompanyId || searchTerm || statusFilter !== 'all') && (
+              <span className="text-blue-600">
+                Filtros aplicados
+              </span>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Main Content: Driver List Table */}
-      <div className="card-modern p-6 overflow-x-auto">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4">Listado de Conductores</h2>
-        {loading ? (
-          <div className="text-center py-10 text-gray-500">Cargando conductores...</div>
-        ) : (
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Foto
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre Completo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cédula
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Empresa
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Licencia / Tipo
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Calificación General
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Calificación Último Mes
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Horas Conducción
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {drivers.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-500">
-                    No se encontraron conductores.
-                  </td>
-                </tr>
-              ) : (
-                drivers.map((driver) => (
-                  <tr key={driver.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {driver.foto_perfil_url ? (
-                        <Image
-                          className="h-10 w-10 rounded-full"
-                          src={driver.foto_perfil_url}
-                          alt="Foto Conductor"
-                          width={40}
-                          height={40}
-                        />
-                      ) : (
-                        <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-xs">
-                          {driver.nombre_completo.charAt(0)}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {driver.nombre_completo}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {driver.cedula}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {companies.find(c => c.id === driver.id_empresa)?.nombre_empresa || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {driver.licencia_conduccion} ({driver.tipo_licencia})
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {driver.calificacion_general?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {driver.calificacion_ultimo_mes?.toFixed(1) || 'N/A'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {driver.horas_conduccion || 'N/A'} hrs
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        driver.activo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                      }`}>
-                        {driver.activo ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      {/* Example link to a detailed driver page */}
-                      <Link href={`/drivers/${driver.id}`} className="text-indigo-600 hover:text-indigo-900">
-                        Ver Detalles
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        )}
-        {/* Pagination Controls would go here */}
-      </div>
+      {/* Mensaje de error */}
+      {error && (
+        <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <strong>Error de conexión:</strong> {error}
+              <div className="text-sm mt-1">
+                Verifica que el backend esté corriendo en {API_ENDPOINTS.drivers.base}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tabla de conductores */}
+      <DriversTable 
+        drivers={filteredDrivers} 
+        companies={companies} 
+        loading={loading} 
+      />
+
+      {/* Footer con estadísticas */}
+      {drivers.length > 0 && (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Resumen Estadístico</h3>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{activeDrivers}</div>
+              <div className="text-sm text-gray-600">Conductores Activos</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {totalDrivers > 0 ? Math.round((activeDrivers / totalDrivers) * 100) : 0}% del total
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{companies.length}</div>
+              <div className="text-sm text-gray-600">Empresas Registradas</div>
+              <div className="text-xs text-gray-500 mt-1">
+                {companiesWithDrivers} con conductores
+              </div>
+            </div>
+            
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{filteredDrivers.length}</div>
+              <div className="text-sm text-gray-600">Resultados Mostrados</div>
+              <div className="text-xs text-gray-500 mt-1">
+                Después de aplicar filtros
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
